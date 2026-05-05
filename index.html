@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sketch to 2D Model</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #e0e0e0; display: flex; flex-direction: column; align-items: center; padding: 40px; }
+        h1 { color: #00d4ff; margin-bottom: 10px; }
+        .upload-section { background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333; margin-bottom: 20px; }
+        #canvas-container { 
+            width: 800px; height: 500px; background: #252525; 
+            border: 2px solid #444; position: relative; border-radius: 4px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .component-box {
+            position: absolute; width: 120px; height: 70px;
+            background: rgba(0, 212, 255, 0.2); border: 2px solid #00d4ff;
+            color: #fff; padding: 8px; font-size: 11px; cursor: move;
+            border-radius: 4px; backdrop-filter: blur(2px);
+        }
+        button { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #218838; }
+    </style>
+</head>
+<body>
+    <h1>Industrial Sketch-to-2D</h1>
+    <p>Upload your rough drawing to generate a digital layout.</p>
+    
+    <div class="upload-section">
+        <input type="file" id="fileInput" accept="image/*">
+        <button onclick="processSketch()">Generate Model</button>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script>
+        async function processSketch() {
+            const fileInput = document.getElementById('fileInput');
+            const container = document.getElementById('canvas-container');
+            
+            if (!fileInput.files[0]) return alert("Please select an image first!");
+            
+            container.innerHTML = "<h3 style='text-align:center; margin-top:200px;'>AI Analyzing Sketch...</h3>";
+            
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/analyze', { method: 'POST', body: formData });
+                const components = await response.json();
+                
+                container.innerHTML = ""; // Clear loader
+                
+                components.forEach(comp => {
+                    const el = document.createElement('div');
+                    el.className = 'component-box';
+                    el.style.left = comp.x + 'px';
+                    el.style.top = comp.y + 'px';
+                    el.innerHTML = `<strong>${comp.name}</strong><br>${comp.specs || ''}`;
+                    container.appendChild(el);
+                    makeDraggable(el);
+                });
+            } catch (err) {
+                alert("Connection failed. Check terminal for errors.");
+                container.innerHTML = "";
+            }
+        }
+
+        function makeDraggable(el) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            el.onmousedown = (e) => {
+                pos3 = e.clientX; pos4 = e.clientY;
+                document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
+                document.onmousemove = (e) => {
+                    pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY;
+                    pos3 = e.clientX; pos4 = e.clientY;
+                    el.style.top = (el.offsetTop - pos2) + "px";
+                    el.style.left = (el.offsetLeft - pos1) + "px";
+                };
+            };
+        }
+    </script>
+</body>
+</html>
