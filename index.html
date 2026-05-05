@@ -2,82 +2,71 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Sketch to 2D Model</title>
+    <title>Industrial Sketch AI</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #e0e0e0; display: flex; flex-direction: column; align-items: center; padding: 40px; }
-        h1 { color: #00d4ff; margin-bottom: 10px; }
-        .upload-section { background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333; margin-bottom: 20px; }
-        #canvas-container { 
-            width: 800px; height: 500px; background: #252525; 
-            border: 2px solid #444; position: relative; border-radius: 4px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        body { background: #0f0f0f; color: #00d4ff; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .controls { background: #1a1a1a; padding: 20px; border-radius: 10px; border: 1px solid #333; margin-bottom: 20px; }
+        #canvas { 
+            width: 800px; height: 500px; background: #1a1a1a; 
+            border: 2px solid #00d4ff; position: relative; overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.2); border-radius: 10px;
         }
-        .component-box {
-            position: absolute; width: 120px; height: 70px;
-            background: rgba(0, 212, 255, 0.2); border: 2px solid #00d4ff;
-            color: #fff; padding: 8px; font-size: 11px; cursor: move;
-            border-radius: 4px; backdrop-filter: blur(2px);
+        .component {
+            position: absolute; width: 140px; height: 80px;
+            background: rgba(0, 212, 255, 0.1); border: 2px solid #00d4ff;
+            color: white; padding: 10px; font-size: 11px; border-radius: 5px;
+            backdrop-filter: blur(5px); box-sizing: border-box;
         }
-        button { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #218838; }
+        button { background: #00d4ff; color: #000; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        button:disabled { background: #444; color: #888; }
     </style>
 </head>
 <body>
-    <h1>Industrial Sketch-to-2D</h1>
-    <p>Upload your rough drawing to generate a digital layout.</p>
-    
-    <div class="upload-section">
+    <h1>Industrial Sketch-to-2D Model</h1>
+    <div class="controls">
         <input type="file" id="fileInput" accept="image/*">
-        <button onclick="processSketch()">Generate Model</button>
+        <button id="btn" onclick="process()">Generate 2D Model</button>
     </div>
-
-    <div id="canvas-container"></div>
+    <div id="canvas"></div>
 
     <script>
-        async function processSketch() {
+        async function process() {
             const fileInput = document.getElementById('fileInput');
-            const container = document.getElementById('canvas-container');
-            
-            if (!fileInput.files[0]) return alert("Please select an image first!");
-            
-            container.innerHTML = "<h3 style='text-align:center; margin-top:200px;'>AI Analyzing Sketch...</h3>";
-            
+            const btn = document.getElementById('btn');
+            const canvas = document.getElementById('canvas');
+
+            if (!fileInput.files[0]) return alert("Please select a sketch image first!");
+
+            btn.disabled = true;
+            canvas.innerHTML = "<p style='text-align:center; margin-top:220px; font-size: 20px;'>AI Analyzing Sketch... Please wait.</p>";
+
             const formData = new FormData();
             formData.append('image', fileInput.files[0]);
 
             try {
                 const response = await fetch('/analyze', { method: 'POST', body: formData });
-                const components = await response.json();
-                
-                container.innerHTML = ""; // Clear loader
-                
-                components.forEach(comp => {
-                    const el = document.createElement('div');
-                    el.className = 'component-box';
-                    el.style.left = comp.x + 'px';
-                    el.style.top = comp.y + 'px';
-                    el.innerHTML = `<strong>${comp.name}</strong><br>${comp.specs || ''}`;
-                    container.appendChild(el);
-                    makeDraggable(el);
-                });
-            } catch (err) {
-                alert("Connection failed. Check terminal for errors.");
-                container.innerHTML = "";
-            }
-        }
+                const data = await response.json();
 
-        function makeDraggable(el) {
-            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            el.onmousedown = (e) => {
-                pos3 = e.clientX; pos4 = e.clientY;
-                document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
-                document.onmousemove = (e) => {
-                    pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY;
-                    pos3 = e.clientX; pos4 = e.clientY;
-                    el.style.top = (el.offsetTop - pos2) + "px";
-                    el.style.left = (el.offsetLeft - pos1) + "px";
-                };
-            };
+                if (data.error) throw new Error(data.error);
+
+                canvas.innerHTML = ""; // Clear the loading text
+                
+                data.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'component';
+                    div.style.left = item.x + 'px';
+                    div.style.top = item.y + 'px';
+                    div.innerHTML = `<b>${item.name}</b><hr style="border:0; border-top:1px solid #00d4ff;">${item.specs}`;
+                    canvas.appendChild(div);
+                });
+
+            } catch (err) {
+                console.error(err);
+                alert("AI Error: " + err.message + "\n\n1. Ensure your API Key is valid.\n2. Ensure Port 3000 is PUBLIC.");
+                canvas.innerHTML = "";
+            } finally {
+                btn.disabled = false;
+            }
         }
     </script>
 </body>
