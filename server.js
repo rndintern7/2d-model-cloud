@@ -5,24 +5,31 @@ const path = require('path');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
-app.use(cors());
 
-// This handles serving your index.html automatically
-app.use(express.static(__dirname));
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static(__dirname)); 
 
 const upload = multer({ storage: multer.memoryStorage() });
-const genAI = new GoogleGenerativeAI("AIzaSyCPp6SYIYdj1ZXz-OWw8sWPGuUmJDxUJNI");
 
-// Explicitly send index.html when someone visits the main page
+// ⚠️ PASTE YOUR BRAND NEW API KEY BELOW
+const genAI = new GoogleGenerativeAI("PASTE_NEW_KEY_HERE");
+
+// This ensures the website loads when you open the URL
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.post('/analyze', upload.single('image'), async (req, res) => {
     try {
+        console.log("AI is processing the sketch...");
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-        const prompt = "Analyze this industrial sketch. Return ONLY a JSON array of components with 'name', 'x', 'y', and 'specs'. Scale for 800x500.";
         
+        const prompt = `Act as an industrial engineer. Identify components in this sketch.
+        Return ONLY a valid JSON array of objects with: 
+        "name" (component name), "x" (0-700), "y" (0-400), "specs" (technical info).`;
+
         const imagePart = {
             inlineData: {
                 data: req.file.buffer.toString("base64"),
@@ -32,10 +39,16 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
 
         const result = await model.generateContent([prompt, imagePart]);
         const text = result.response.text().replace(/```json|```/g, "").trim();
+        
+        console.log("AI Result received successfully!");
         res.json(JSON.parse(text));
-    } catch (e) {
-        res.status(500).json({ error: e.message });
+    } catch (error) {
+        console.error("Server Error:", error.message);
+        res.status(500).json({ error: error.message });
     }
 });
 
-app.listen(3000, () => console.log("🚀 AI Engine Online on Port 3000"));
+const PORT = 3000;
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 AI Server live on Port ${PORT}`);
+});
