@@ -1,7 +1,6 @@
 {
   "name": "industrial-sketch-ai",
   "version": "1.0.0",
-  "description": "Sketch to 2D Model using Gemini AI",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
